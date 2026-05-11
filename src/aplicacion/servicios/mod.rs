@@ -1,0 +1,15 @@
+pub mod registro_colaborador;
+pub mod solicitud_servicio;
+pub mod registro_usuario;
+pub mod login_usuario;
+pub mod listar_categorias;
+pub mod listar_subcategorias;
+pub mod consultar_perfil_colaborador;
+pub mod listar_solicitudes;
+pub mod listar_colaboradores_marketplace;
+pub mod gestionar_mensajes;
+pub mod actualizar_documentacion;
+pub mod configurar_precios_dinamicos;
+pub mod configurar_horarios;
+pub mod verificar_colaborador;
+pub mod gestionar_estado_solicitud;

@@ -1,0 +1,36 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: finit_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: finit
+      MYSQL_USER: ivan
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - finit_db_data:/var/lib/mysql
+
+  motor-finit:
+    build: .
+    container_name: motor_finit
+    depends_on:
+      - db
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=mysql://ivan:password@db:3306/finit
+      - JWT_SECRET=secreto_finit
+      - PUERTO=3000
+    networks:
+      - finit-network
+
+volumes:
+  finit_db_data:
+
+networks:
+  finit-network:
+    driver: bridge
