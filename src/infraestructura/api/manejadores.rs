@@ -319,6 +319,48 @@ pub async fn configurar_horarios(
 }
 
 #[derive(Deserialize)]
+pub struct DatosSubcategoria {
+    pub categoria_id: Option<i32>,
+    pub nombre: String,
+    pub descripcion: Option<String>,
+}
+
+#[axum::debug_handler]
+pub async fn crear_subcategoria(
+    State(estado): State<Arc<EstadoApp>>,
+    Json(datos): Json<DatosSubcategoria>,
+) -> Result<Json<Subcategoria>, AppError> {
+    match estado.gestionar_subcategoria.crear(datos.categoria_id.unwrap_or(0), datos.nombre, datos.descripcion).await {
+        Ok(subcategoria) => Ok(Json(subcategoria)),
+        Err(e) => Err(AppError(e.to_string())),
+    }
+}
+
+#[axum::debug_handler]
+pub async fn actualizar_subcategoria(
+    State(estado): State<Arc<EstadoApp>>,
+    Path(id): Path<i32>,
+    Json(datos): Json<DatosSubcategoria>,
+) -> Result<StatusCode, AppError> {
+    match estado.gestionar_subcategoria.actualizar(id, datos.nombre, datos.descripcion).await {
+        Ok(_) => Ok(StatusCode::OK),
+        Err(e) => Err(AppError(e.to_string())),
+    }
+}
+
+#[axum::debug_handler]
+pub async fn eliminar_subcategoria(
+    State(estado): State<Arc<EstadoApp>>,
+    Path(id): Path<i32>,
+) -> Result<StatusCode, AppError> {
+    match estado.gestionar_subcategoria.eliminar(id).await {
+        Ok(_) => Ok(StatusCode::OK),
+        Err(e) => Err(AppError(e.to_string())),
+    }
+}
+
+
+#[derive(Deserialize)]
 pub struct DatosEstadoSolicitud {
     pub nuevo_estado: String,
 }

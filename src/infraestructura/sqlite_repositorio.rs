@@ -3,6 +3,7 @@ use crate::dominio::colaborador::{Colaborador, TrabajoPortafolio, EstadoVerifica
 use crate::dominio::servicio::{Servicio, PrecioServicioUrgencia};
 use crate::dominio::solicitud::{SolicitudServicio, EstadoSolicitud};
 use crate::dominio::urgencia::Urgencia;
+use crate::dominio::puertos::repositorio_precio_subcategoria::RepositorioPrecioSubcategoria;
 use crate::dominio::mensaje::MensajeSolicitud;
 use crate::dominio::categoria::{Categoria, Subcategoria};
 use crate::dominio::disponibilidad::Disponibilidad;
@@ -63,6 +64,8 @@ impl RepositorioSQLite {
             .execute(&self.pool).await?;
         
         sqlx::query("CREATE TABLE IF NOT EXISTS precio_servicio_urgencia (id INTEGER PRIMARY KEY AUTOINCREMENT, servicio_id INTEGER, urgencia TEXT, precio TEXT)")
+            .execute(&self.pool).await?;
+        sqlx::query("CREATE TABLE IF NOT EXISTS precio_subcategoria (id INTEGER PRIMARY KEY AUTOINCREMENT, subcategoria_id INTEGER UNIQUE, precio_base TEXT)")
             .execute(&self.pool).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS solicitud_servicio (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER, colaborador_id INTEGER, subcategoria_id INTEGER, servicio_id INTEGER, urgencia TEXT, precio_final TEXT, estado TEXT, descripcion_detallada TEXT, fotos_evidencia_inicial TEXT, latitud_usuario TEXT, longitud_usuario TEXT, calle TEXT, numero TEXT, colonia TEXT, referencias TEXT, detalles_adicionales TEXT, fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP)")
             .execute(&self.pool).await?;
@@ -153,14 +156,35 @@ impl RepositorioCategoria for RepositorioSQLite {
             .fetch_optional(&self.pool).await?;
         Ok(subcategoria)
     }
+    async fn guardar_subcategoria(&self, categoria_id: i32, nombre: String, descripcion: Option<String>) -> Result<Subcategoria, Box<dyn Error + Send + Sync>> {
+        let resultado = sqlx::query("INSERT INTO subcategoria (categoria_id, nombre, descripcion) VALUES (?, ?, ?)")
+            .bind(categoria_id).bind(&nombre).bind(&descripcion).execute(&self.pool).await?;
+        Ok(Subcategoria { id: Some(resultado.last_insert_rowid() as i32), categoria_id, nombre, descripcion })
+    }
+    async fn actualizar_subcategoria(&self, id: i32, nombre: String, descripcion: Option<String>) -> Result<(), Box<dyn Error + Send + Sync>> {
+        sqlx::query("UPDATE subcategoria SET nombre = ?, descripcion = ? WHERE id = ?")
+            .bind(&nombre).bind(&descripcion).bind(id).execute(&self.pool).await?;
+        Ok(())
+    }
+    async fn eliminar_subcategoria(&self, id: i32) -> Result<(), Box<dyn Error + Send + Sync>> {
+        sqlx::query("DELETE FROM subcategoria WHERE id = ?").bind(id).execute(&self.pool).await?;
+        Ok(())
+    }
 }
 
 #[async_trait]
 impl RepositorioUsuario for RepositorioSQLite {
     async fn guardar(&self, usuario: Usuario) -> Result<Usuario, Box<dyn Error + Send + Sync>> {
-        let resultado = sqlx::query("INSERT INTO usuario (nombre, correo, contrasenna, rol) VALUES (?, ?, ?, ?)")
-            .bind(&usuario.nombre).bind(&usuario.correo).bind(&usuario.contrasenna).bind(&usuario.rol).execute(&self.pool).await?;
-        Ok(Usuario { id: Some(resultado.last_insert_rowid() as i32), ..usuario })
+        if let Some(id) = usuario.id {
+            sqlx::query("UPDATE usuario SET nombre = ?, correo = ?, contrasenna = ?, rol = ? WHERE id = ?")
+                .bind(&usuario.nombre).bind(&usuario.correo).bind(&usuario.contrasenna).bind(&usuario.rol).bind(id)
+                .execute(&self.pool).await?;
+            Ok(usuario)
+        } else {
+            let resultado = sqlx::query("INSERT INTO usuario (nombre, correo, contrasenna, rol) VALUES (?, ?, ?, ?)")
+                .bind(&usuario.nombre).bind(&usuario.correo).bind(&usuario.contrasenna).bind(&usuario.rol).execute(&self.pool).await?;
+            Ok(Usuario { id: Some(resultado.last_insert_rowid() as i32), ..usuario })
+        }
     }
     async fn buscar_por_id(&self, id: i32) -> Result<Option<Usuario>, Box<dyn Error + Send + Sync>> {
         Ok(sqlx::query_as::<_, Usuario>("SELECT id, nombre, correo, contrasenna, rol FROM usuario WHERE id = ?").bind(id).fetch_optional(&self.pool).await?)
@@ -169,6 +193,39 @@ impl RepositorioUsuario for RepositorioSQLite {
         Ok(sqlx::query_as::<_, Usuario>("SELECT id, nombre, correo, contrasenna, rol FROM usuario WHERE correo = ?").bind(correo).fetch_optional(&self.pool).await?)
     }
 }
+
+#[async_trait]
+impl RepositorioPrecioSubcategoria for RepositorioSQLite {
+    async fn guardar(&self, precio: crate::dominio::precio_subcategoria::PrecioSubcategoria) -> Result<crate::dominio::precio_subcategoria::PrecioSubcategoria, Box<dyn Error + Send + Sync>> {
+        let resultado = sqlx::query("INSERT INTO precio_subcategoria (subcategoria_id, precio_normal, precio_nocturno, precio_domingo_festivo) VALUES (?, ?, ?, ?)")
+            .bind(precio.subcategoria_id)
+            .bind(precio.precio_normal.to_string())
+            .bind(precio.precio_nocturno.to_string())
+            .bind(precio.precio_domingo_festivo.to_string())
+            .execute(&self.pool).await?;
+        Ok(crate::dominio::precio_subcategoria::PrecioSubcategoria { id: Some(resultado.last_insert_rowid() as i32), ..precio })
+    }
+    async fn actualizar(&self, precio: crate::dominio::precio_subcategoria::PrecioSubcategoria) -> Result<crate::dominio::precio_subcategoria::PrecioSubcategoria, Box<dyn Error + Send + Sync>> {
+        sqlx::query("UPDATE precio_subcategoria SET precio_normal = ?, precio_nocturno = ?, precio_domingo_festivo = ? WHERE subcategoria_id = ?")
+            .bind(precio.precio_normal.to_string())
+            .bind(precio.precio_nocturno.to_string())
+            .bind(precio.precio_domingo_festivo.to_string())
+            .bind(precio.subcategoria_id).execute(&self.pool).await?;
+        Ok(precio)
+    }
+    async fn buscar_por_subcategoria(&self, subcategoria_id: i32) -> Result<Option<crate::dominio::precio_subcategoria::PrecioSubcategoria>, Box<dyn Error + Send + Sync>> {
+        let row = sqlx::query("SELECT id, subcategoria_id, precio_normal, precio_nocturno, precio_domingo_festivo FROM precio_subcategoria WHERE subcategoria_id = ?").bind(subcategoria_id).fetch_optional(&self.pool).await?;
+        if let Some(r) = row {
+            Ok(Some(crate::dominio::precio_subcategoria::PrecioSubcategoria {
+                id: Some(r.get(0)), subcategoria_id: r.get(1),
+                precio_normal: r.get::<String, _>(2).parse().unwrap_or(Decimal::ZERO),
+                precio_nocturno: r.get::<String, _>(3).parse().unwrap_or(Decimal::ZERO),
+                precio_domingo_festivo: r.get::<String, _>(4).parse().unwrap_or(Decimal::ZERO),
+            }))
+        } else { Ok(None) }
+    }
+}
+
 
 #[async_trait]
 impl RepositorioColaborador for RepositorioSQLite {

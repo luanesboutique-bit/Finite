@@ -133,9 +133,13 @@ where R: finit::dominio::puertos::repositorio_usuario::RepositorioUsuario +
         repo.clone(),
     ));
 
+use finit::aplicacion::servicios::gestionar_subcategoria::CasoUsoGestionarSubcategoria;
+// ...
     let gestionar_estado_solicitud = Arc::new(finit::aplicacion::servicios::gestionar_estado_solicitud::CasoUsoGestionarEstadoSolicitud::nuevo(
         repo.clone(),
     ));
+
+    let gestionar_subcategoria = Arc::new(CasoUsoGestionarSubcategoria::nuevo(repo.clone()));
 
     EstadoApp {
         registro_colaborador,
@@ -153,5 +157,6 @@ where R: finit::dominio::puertos::repositorio_usuario::RepositorioUsuario +
         configurar_horarios,
         verificar_colaborador,
         gestionar_estado_solicitud,
+        gestionar_subcategoria,
     }
 }

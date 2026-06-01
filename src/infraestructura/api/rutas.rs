@@ -18,6 +18,7 @@ use crate::aplicacion::servicios::configurar_horarios::CasoUsoConfigurarHorarios
 
 use crate::aplicacion::servicios::verificar_colaborador::CasoUsoVerificarColaborador;
 use crate::aplicacion::servicios::gestionar_estado_solicitud::CasoUsoGestionarEstadoSolicitud;
+use crate::aplicacion::servicios::gestionar_subcategoria::CasoUsoGestionarSubcategoria;
 
 pub struct EstadoApp {
     pub registro_colaborador: Arc<CasoUsoRegistroColaborador>,
@@ -35,6 +36,7 @@ pub struct EstadoApp {
     pub configurar_horarios: Arc<CasoUsoConfigurarHorarios>,
     pub verificar_colaborador: Arc<CasoUsoVerificarColaborador>,
     pub gestionar_estado_solicitud: Arc<CasoUsoGestionarEstadoSolicitud>,
+    pub gestionar_subcategoria: Arc<CasoUsoGestionarSubcategoria>,
 }
 
 pub fn crear_rutas(estado: Arc<EstadoApp>) -> Router {
@@ -58,5 +60,9 @@ pub fn crear_rutas(estado: Arc<EstadoApp>) -> Router {
         .route("/solicitudes/:id/mensajes", post(manejadores::enviar_mensaje))
         .route("/solicitudes/:id/mensajes", get(manejadores::listar_mensajes))
         .route("/admin/colaboradores/pendientes", get(manejadores::listar_colaboradores_pendientes))
+        .route("/admin/precios", post(manejadores::configurar_precios_dinamicos))
+        .route("/subcategorias", post(manejadores::crear_subcategoria))
+        .route("/subcategorias/:id", post(manejadores::actualizar_subcategoria))
+        .route("/subcategorias/:id/eliminar", post(manejadores::eliminar_subcategoria))
         .with_state(estado)
 }

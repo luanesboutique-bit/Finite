@@ -13,3 +13,5 @@ pub mod configurar_precios_dinamicos;
 pub mod configurar_horarios;
 pub mod verificar_colaborador;
 pub mod gestionar_estado_solicitud;
+pub mod configurar_precio_subcategoria;
+pub mod gestionar_subcategoria;

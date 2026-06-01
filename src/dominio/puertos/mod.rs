@@ -6,3 +6,4 @@ pub mod repositorio_mensaje;
 pub mod repositorio_categoria;
 pub mod repositorio_disponibilidad;
 pub mod repositorio_configuracion_precio;
+pub mod repositorio_precio_subcategoria;
