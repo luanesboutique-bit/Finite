@@ -9,6 +9,7 @@ pub mod mysql_repositorio_categoria;
 pub mod mysql_repositorio_mensaje;
 pub mod mysql_repositorio_disponibilidad;
 pub mod mysql_repositorio_configuracion_precio;
+pub mod mysql_repositorio_precio;
 pub mod sqlite_repositorio;
 pub mod api;
 

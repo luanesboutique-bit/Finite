@@ -17,8 +17,8 @@ impl CasoUsoConfigurarPrecioSubcategoria {
         &self,
         subcategoria_id: i32,
         precio_normal: Decimal,
-        precio_nocturno: Decimal,
-        precio_domingo_festivo: Decimal,
+        precio_medio: Decimal,
+        precio_urgente: Decimal,
     ) -> Result<PrecioSubcategoria, Box<dyn Error + Send + Sync>> {
         let precio_existente = self.repositorio_precio.buscar_por_subcategoria(subcategoria_id).await?;
 
@@ -26,8 +26,8 @@ impl CasoUsoConfigurarPrecioSubcategoria {
             id: precio_existente.as_ref().and_then(|p| p.id),
             subcategoria_id,
             precio_normal,
-            precio_nocturno,
-            precio_domingo_festivo,
+            precio_medio,
+            precio_urgente,
         };
 
         if precio_existente.is_some() {

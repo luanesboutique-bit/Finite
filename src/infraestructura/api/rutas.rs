@@ -20,6 +20,8 @@ use crate::aplicacion::servicios::verificar_colaborador::CasoUsoVerificarColabor
 use crate::aplicacion::servicios::gestionar_estado_solicitud::CasoUsoGestionarEstadoSolicitud;
 use crate::aplicacion::servicios::gestionar_subcategoria::CasoUsoGestionarSubcategoria;
 
+use crate::dominio::puertos::repositorio_precio_subcategoria::RepositorioPrecioSubcategoria;
+
 pub struct EstadoApp {
     pub registro_colaborador: Arc<CasoUsoRegistroColaborador>,
     pub registro_usuario: Arc<CasoUsoRegistroUsuario>,
@@ -37,6 +39,7 @@ pub struct EstadoApp {
     pub verificar_colaborador: Arc<CasoUsoVerificarColaborador>,
     pub gestionar_estado_solicitud: Arc<CasoUsoGestionarEstadoSolicitud>,
     pub gestionar_subcategoria: Arc<CasoUsoGestionarSubcategoria>,
+    pub repositorio_precio_subcategoria: Arc<dyn RepositorioPrecioSubcategoria + Send + Sync>,
 }
 
 pub fn crear_rutas(estado: Arc<EstadoApp>) -> Router {
@@ -64,5 +67,6 @@ pub fn crear_rutas(estado: Arc<EstadoApp>) -> Router {
         .route("/subcategorias", post(manejadores::crear_subcategoria))
         .route("/subcategorias/:id", post(manejadores::actualizar_subcategoria))
         .route("/subcategorias/:id/eliminar", post(manejadores::eliminar_subcategoria))
+        .route("/subcategorias/:id/precios", post(manejadores::configurar_precios_subcategoria))
         .with_state(estado)
 }

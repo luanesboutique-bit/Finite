@@ -406,3 +406,42 @@ pub async fn listar_colaboradores_pendientes(
         Err(e) => Err(AppError(e.to_string())),
     }
 }
+
+#[derive(Deserialize)]
+pub struct DatosPreciosSubcategoria {
+    pub precio_normal: Decimal,
+    pub precio_medio: Decimal,
+    pub precio_urgente: Decimal,
+}
+
+#[axum::debug_handler]
+pub async fn configurar_precios_subcategoria(
+    State(estado): State<Arc<EstadoApp>>,
+    Path(id): Path<i32>,
+    Json(datos): Json<DatosPreciosSubcategoria>,
+) -> Result<StatusCode, AppError> {
+    use crate::dominio::precio_subcategoria::PrecioSubcategoria;
+    let precio = PrecioSubcategoria {
+        id: None,
+        subcategoria_id: id,
+        precio_normal: datos.precio_normal,
+        precio_medio: datos.precio_medio,
+        precio_urgente: datos.precio_urgente,
+    };
+    
+    match estado.repositorio_precio_subcategoria.buscar_por_subcategoria(id).await {
+        Ok(Some(_)) => {
+            match estado.repositorio_precio_subcategoria.actualizar(precio).await {
+                Ok(_) => Ok(StatusCode::OK),
+                Err(e) => Err(AppError(e.to_string())),
+            }
+        },
+        Ok(None) => {
+            match estado.repositorio_precio_subcategoria.guardar(precio).await {
+                Ok(_) => Ok(StatusCode::OK),
+                Err(e) => Err(AppError(e.to_string())),
+            }
+        },
+        Err(e) => Err(AppError(e.to_string())),
+    }
+}

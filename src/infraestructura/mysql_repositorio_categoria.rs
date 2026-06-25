@@ -42,7 +42,15 @@ impl RepositorioCategoria for RepositorioMySQL {
     async fn guardar_subcategoria(&self, categoria_id: i32, nombre: String, descripcion: Option<String>) -> Result<Subcategoria, Box<dyn Error + Send + Sync>> {
         let resultado = sqlx::query("INSERT INTO subcategoria (categoria_id, nombre, descripcion) VALUES (?, ?, ?)")
             .bind(categoria_id).bind(&nombre).bind(&descripcion).execute(&self.pool).await?;
-        Ok(Subcategoria { id: Some(resultado.last_insert_id() as i32), categoria_id, nombre, descripcion })
+        Ok(Subcategoria { 
+            id: Some(resultado.last_insert_id() as i32), 
+            categoria_id, 
+            nombre, 
+            descripcion,
+            precio_normal: None,
+            precio_medio: None,
+            precio_urgente: None,
+        })
     }
     async fn actualizar_subcategoria(&self, id: i32, nombre: String, descripcion: Option<String>) -> Result<(), Box<dyn Error + Send + Sync>> {
         sqlx::query("UPDATE subcategoria SET nombre = ?, descripcion = ? WHERE id = ?")

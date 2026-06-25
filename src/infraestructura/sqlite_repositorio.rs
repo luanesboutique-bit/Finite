@@ -80,16 +80,20 @@ impl RepositorioSQLite {
         sqlx::query("CREATE TABLE IF NOT EXISTS mensaje_solicitud (id INTEGER PRIMARY KEY AUTOINCREMENT, solicitud_id INTEGER, emisor_id INTEGER, contenido TEXT, fecha_envio DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (solicitud_id) REFERENCES solicitud_servicio(id))")
             .execute(&self.pool).await?;
 
-        // 2. Insertar Datos Semilla (Categorias 1-8)
+        // 2. Insertar Datos Semilla
         let categorias = vec![
             (1, "Cerrajeria"),
             (2, "Plomeria"),
             (3, "Electricidad"),
             (4, "Limpieza General"),
             (5, "Limpieza de Muebles"),
-            (6, "Armado de Muebles"),
-            (7, "Albañileria y Pintura"),
-            (8, "Fletes y Mudanzas")
+            (6, "Armado"),
+            (8, "Fletes"),
+            (7, "Albañileria"),
+            (9, "Reparaciones"),
+            (10, "Herreria"),
+            (11, "Autos"),
+            (12, "Instalaciones")
         ];
 
         for (id, nombre) in categorias {
@@ -127,10 +131,12 @@ impl RepositorioSQLite {
             (8, "Volado de Muebles", "Subida de muebles por ventana")
         ];
 
+        /*
         for (cat_id, nombre, desc) in subcats {
             let _ = sqlx::query("INSERT OR IGNORE INTO subcategoria (categoria_id, nombre, descripcion) VALUES (?, ?, ?)")
                 .bind(cat_id).bind(nombre).bind(desc).execute(&self.pool).await;
         }
+        */
 
         println!("✅ Base de datos SQLite inicializada con datos semilla.");
         Ok(())
@@ -159,7 +165,15 @@ impl RepositorioCategoria for RepositorioSQLite {
     async fn guardar_subcategoria(&self, categoria_id: i32, nombre: String, descripcion: Option<String>) -> Result<Subcategoria, Box<dyn Error + Send + Sync>> {
         let resultado = sqlx::query("INSERT INTO subcategoria (categoria_id, nombre, descripcion) VALUES (?, ?, ?)")
             .bind(categoria_id).bind(&nombre).bind(&descripcion).execute(&self.pool).await?;
-        Ok(Subcategoria { id: Some(resultado.last_insert_rowid() as i32), categoria_id, nombre, descripcion })
+        Ok(Subcategoria { 
+            id: Some(resultado.last_insert_rowid() as i32), 
+            categoria_id, 
+            nombre, 
+            descripcion,
+            precio_normal: None,
+            precio_medio: None,
+            precio_urgente: None,
+        })
     }
     async fn actualizar_subcategoria(&self, id: i32, nombre: String, descripcion: Option<String>) -> Result<(), Box<dyn Error + Send + Sync>> {
         sqlx::query("UPDATE subcategoria SET nombre = ?, descripcion = ? WHERE id = ?")
@@ -197,30 +211,30 @@ impl RepositorioUsuario for RepositorioSQLite {
 #[async_trait]
 impl RepositorioPrecioSubcategoria for RepositorioSQLite {
     async fn guardar(&self, precio: crate::dominio::precio_subcategoria::PrecioSubcategoria) -> Result<crate::dominio::precio_subcategoria::PrecioSubcategoria, Box<dyn Error + Send + Sync>> {
-        let resultado = sqlx::query("INSERT INTO precio_subcategoria (subcategoria_id, precio_normal, precio_nocturno, precio_domingo_festivo) VALUES (?, ?, ?, ?)")
+        let resultado = sqlx::query("INSERT INTO precio_subcategoria (subcategoria_id, precio_normal, precio_medio, precio_urgente) VALUES (?, ?, ?, ?)")
             .bind(precio.subcategoria_id)
             .bind(precio.precio_normal.to_string())
-            .bind(precio.precio_nocturno.to_string())
-            .bind(precio.precio_domingo_festivo.to_string())
+            .bind(precio.precio_medio.to_string())
+            .bind(precio.precio_urgente.to_string())
             .execute(&self.pool).await?;
         Ok(crate::dominio::precio_subcategoria::PrecioSubcategoria { id: Some(resultado.last_insert_rowid() as i32), ..precio })
     }
     async fn actualizar(&self, precio: crate::dominio::precio_subcategoria::PrecioSubcategoria) -> Result<crate::dominio::precio_subcategoria::PrecioSubcategoria, Box<dyn Error + Send + Sync>> {
-        sqlx::query("UPDATE precio_subcategoria SET precio_normal = ?, precio_nocturno = ?, precio_domingo_festivo = ? WHERE subcategoria_id = ?")
+        sqlx::query("UPDATE precio_subcategoria SET precio_normal = ?, precio_medio = ?, precio_urgente = ? WHERE subcategoria_id = ?")
             .bind(precio.precio_normal.to_string())
-            .bind(precio.precio_nocturno.to_string())
-            .bind(precio.precio_domingo_festivo.to_string())
+            .bind(precio.precio_medio.to_string())
+            .bind(precio.precio_urgente.to_string())
             .bind(precio.subcategoria_id).execute(&self.pool).await?;
         Ok(precio)
     }
     async fn buscar_por_subcategoria(&self, subcategoria_id: i32) -> Result<Option<crate::dominio::precio_subcategoria::PrecioSubcategoria>, Box<dyn Error + Send + Sync>> {
-        let row = sqlx::query("SELECT id, subcategoria_id, precio_normal, precio_nocturno, precio_domingo_festivo FROM precio_subcategoria WHERE subcategoria_id = ?").bind(subcategoria_id).fetch_optional(&self.pool).await?;
+        let row = sqlx::query("SELECT id, subcategoria_id, precio_normal, precio_medio, precio_urgente FROM precio_subcategoria WHERE subcategoria_id = ?").bind(subcategoria_id).fetch_optional(&self.pool).await?;
         if let Some(r) = row {
             Ok(Some(crate::dominio::precio_subcategoria::PrecioSubcategoria {
                 id: Some(r.get(0)), subcategoria_id: r.get(1),
                 precio_normal: r.get::<String, _>(2).parse().unwrap_or(Decimal::ZERO),
-                precio_nocturno: r.get::<String, _>(3).parse().unwrap_or(Decimal::ZERO),
-                precio_domingo_festivo: r.get::<String, _>(4).parse().unwrap_or(Decimal::ZERO),
+                precio_medio: r.get::<String, _>(3).parse().unwrap_or(Decimal::ZERO),
+                precio_urgente: r.get::<String, _>(4).parse().unwrap_or(Decimal::ZERO),
             }))
         } else { Ok(None) }
     }

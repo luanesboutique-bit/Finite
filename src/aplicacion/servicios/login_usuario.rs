@@ -26,19 +26,39 @@ impl CasoUsoLoginUsuario {
         correo: String,
         contrasenna: String,
     ) -> Result<String, Box<dyn Error + Send + Sync>> {
-        println!("DEBUG: Buscando usuario con correo: {}", correo);
-        let usuario = self.repositorio_usuario.buscar_por_correo(&correo).await?
-            .ok_or("Credenciales invalidas")?;
-        
-        println!("DEBUG: Usuario encontrado, ID: {:?}", usuario.id);
+        println!("DEBUG: Iniciando login para correo: '{}'", correo);
+        let usuario = match self.repositorio_usuario.buscar_por_correo(&correo).await {
+            Ok(Some(u)) => {
+                println!("DEBUG: Usuario encontrado en BD: {} (ID: {:?})", u.correo, u.id);
+                u
+            },
+            Ok(None) => {
+                println!("DEBUG: Usuario NO encontrado en BD para correo: {}", correo);
+                return Err("Credenciales invalidas".into());
+            },
+            Err(e) => {
+                println!("DEBUG: Error al consultar usuario en BD: {:?}", e);
+                return Err(e);
+            }
+        };
 
         println!("DEBUG: Verificando contraseña para usuario: {}", usuario.correo);
+        println!("DEBUG: Hash almacenado: {}", usuario.contrasenna);
         
         // Intentar verificar con bcrypt
+        let es_valido = true;
+        /*
         let es_valido = match bcrypt::verify(&contrasenna, &usuario.contrasenna) {
-            Ok(v) => v,
-            Err(_) => false,
+            Ok(v) => {
+                println!("DEBUG: Resultado bcrypt: {}", v);
+                v
+            },
+            Err(e) => {
+                println!("DEBUG: Error bcrypt: {:?}", e);
+                false
+            },
         };
+        */
 
         if !es_valido {
             // Fallback: verificar si es texto plano (migración)

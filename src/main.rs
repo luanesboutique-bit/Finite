@@ -13,17 +13,20 @@ use finit::aplicacion::servicios::gestionar_mensajes::CasoUsoGestionarMensajes;
 use finit::aplicacion::servicios::actualizar_documentacion::CasoUsoActualizarDocumentacion;
 use finit::aplicacion::servicios::configurar_precios_dinamicos::CasoUsoConfigurarPreciosDinamicos;
 use finit::aplicacion::servicios::configurar_horarios::CasoUsoConfigurarHorarios;
+use finit::aplicacion::servicios::verificar_colaborador::CasoUsoVerificarColaborador;
+use finit::aplicacion::servicios::gestionar_estado_solicitud::CasoUsoGestionarEstadoSolicitud;
+use finit::aplicacion::servicios::gestionar_subcategoria::CasoUsoGestionarSubcategoria;
 use finit::infraestructura::{RepositorioMySQL, sqlite_repositorio::RepositorioSQLite};
 use sqlx::{MySqlPool, SqlitePool};
 use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    dotenvy::dotenv().ok(); // Carga las variables de entorno
+    dotenvy::dotenv().ok(); 
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL no definida en .env");
     let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secreto_finit".to_string());
-    let puerto = std::env::var("PUERTO").unwrap_or_else(|_| "3000".to_string());
+    let puerto = std::env::var("PUERTO").unwrap_or_else(|_| "5001".to_string());
 
     let (estado, motor_nombre) = if db_url.starts_with("sqlite:") {
         println!("Conectando a SQLite...");
@@ -41,11 +44,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     println!("🚀 Iniciando motor finit (Versión {})...", motor_nombre);
 
-    // Configurar Rutas
     let app = ax_routing::crear_rutas(Arc::new(estado))
         .layer(CorsLayer::permissive());
 
-    // Iniciar Servidor
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", puerto)).await?;
     println!("📡 Servidor finit iniciado en http://localhost:{}", puerto);
     
@@ -66,6 +67,7 @@ where R: finit::dominio::puertos::repositorio_usuario::RepositorioUsuario +
          finit::dominio::puertos::repositorio_mensaje::RepositorioMensaje +
          finit::dominio::puertos::repositorio_disponibilidad::RepositorioDisponibilidad +
          finit::dominio::puertos::repositorio_configuracion_precio::RepositorioConfiguracionPrecio +
+         finit::dominio::puertos::repositorio_precio_subcategoria::RepositorioPrecioSubcategoria +
          'static
 {
     let registro_colaborador = Arc::new(CasoUsoRegistroColaborador::nuevo(
@@ -89,6 +91,7 @@ where R: finit::dominio::puertos::repositorio_usuario::RepositorioUsuario +
     ));
 
     let listar_subcategorias = Arc::new(CasoUsoListarSubcategorias::nuevo(
+        repo.clone(),
         repo.clone(),
     ));
 
@@ -129,13 +132,11 @@ where R: finit::dominio::puertos::repositorio_usuario::RepositorioUsuario +
         repo.clone(),
     ));
 
-    let verificar_colaborador = Arc::new(finit::aplicacion::servicios::verificar_colaborador::CasoUsoVerificarColaborador::nuevo(
+    let verificar_colaborador = Arc::new(CasoUsoVerificarColaborador::nuevo(
         repo.clone(),
     ));
 
-use finit::aplicacion::servicios::gestionar_subcategoria::CasoUsoGestionarSubcategoria;
-// ...
-    let gestionar_estado_solicitud = Arc::new(finit::aplicacion::servicios::gestionar_estado_solicitud::CasoUsoGestionarEstadoSolicitud::nuevo(
+    let gestionar_estado_solicitud = Arc::new(CasoUsoGestionarEstadoSolicitud::nuevo(
         repo.clone(),
     ));
 
@@ -158,5 +159,6 @@ use finit::aplicacion::servicios::gestionar_subcategoria::CasoUsoGestionarSubcat
         verificar_colaborador,
         gestionar_estado_solicitud,
         gestionar_subcategoria,
+        repositorio_precio_subcategoria: repo.clone(),
     }
 }
